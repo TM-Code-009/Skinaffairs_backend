@@ -47,7 +47,7 @@ export const createOrder = async (req: Request, res: Response) => {
         const userData = await User.findById(user);
         if (!userData) return res.status(404).json({ message: "User not found" });
 
-        const userName = userData.name;
+        const userName: any = userData.firstname;
         const userEmail: any = userData.email;
 
         // Validate products & calculate total price
