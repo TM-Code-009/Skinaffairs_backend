@@ -190,3 +190,38 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   }
 };
 
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params; // token sent in URL param
+    const { password } = req.body;
+
+    if (!password) {
+      res.status(400).json({ message: "Password is required" });
+      return;
+    }
+
+    // Decode and verify token
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+    const user:any = await User.findById(decoded.id);
+
+    if (!user || user.resetPasswordToken !== token || user.resetPasswordExpires < new Date()) {
+      res.status(400).json({ message: "Invalid or expired token" });
+      return;
+    }
+
+    // Update password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+
+    // Clear token fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
