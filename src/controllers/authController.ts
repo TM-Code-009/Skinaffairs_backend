@@ -160,35 +160,52 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Generate a token valid for 1 hour
+    // Generate token valid for 1 hour
     const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "1h" });
 
-    // Store token in database
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour expiration
+    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
     await user.save();
 
-    // Reset link (Replace with your frontend URL)
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const storeLink = `${process.env.FRONTEND_URL}`;
 
-    // Send Email
-    const subject = "🔑 Password Reset Request";
-    const text = `Click the link below to reset your password: ${resetLink}`;
+    const subject = "Reset Your SkinAffairs Password";
+    const text = `Reset your password: ${resetLink}`;
     const html = `
-      <h2>🔑 Reset Your Password</h2>
-      <p>Hello,</p>
-      <p>We received a request to reset your password. Click the button below:</p>
-      <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
-      <p>If you did not request this, please ignore this email.</p>
+      <div style="font-family: Arial, sans-serif; padding: 40px;">
+        <h2 style="color: black;">Skinaffairs</h2>
+        <p>To: ${user.lastname || "Name" } ${user.firstname || "Name"} </p>
+        <p>Reply To: <a href="mailto:support@skinaffairs.com">support@skinaffairs.com</a></p>
+
+        <h1 style="font-size: 28px;">Reset your password</h1>
+
+        <p style="font-size: 16px; line-height: 1.5;">
+          Follow this link to reset your customer account password at Skin Affairs.
+          If you didn't request a new password, you can safely delete this email.
+        </p>
+
+        <div style="margin: 30px 0; display: flex; gap: 20px;">
+          <a href="${resetLink}" style="background-color: black; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px;">Reset Password</a>
+          <a href="${storeLink}" style="background-color: black; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px;">Visit Our Store</a>
+        </div>
+
+        <p style="font-size: 14px; margin-top: 40px;">
+          If you have any questions, reply to this email or contact us at
+          <a href="mailto:support@skinaffairs.com">support@skinaffairs.com</a>
+        </p>
+      </div>
     `;
 
     await sendEmail(user.email, subject, text, html);
 
     res.status(200).json({ message: "Password reset link sent to your email." });
   } catch (error) {
+    console.error("Forgot password error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 
 export const resetPassword = async (req: Request, res: Response): Promise<void> => {
