@@ -10,15 +10,15 @@ import { protect } from '../middleware/authMiddleware';
 const router = express.Router();
 
 // POST /api/reviews — Add a site review (authenticated)
-router.post('/', protect, addReview);
+router.post('/addreview', protect, addReview);
 
 // GET /api/reviews — Get all site reviews (public)
-router.get('/', getAllReviews);
+router.get('/getallreview', getAllReviews);
 
 // PUT /api/reviews/:reviewId — Update a review (authenticated)
-router.put('/:reviewId', protect, updateReview);
+router.put('/updatereview/:reviewId', protect, updateReview);
 
 // DELETE /api/reviews/:reviewId — Delete a review (authenticated)
-router.delete('/:reviewId', protect, deleteReview);
+router.delete('/deletereview/:reviewId', protect, deleteReview);
 
 export default router;
