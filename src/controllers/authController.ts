@@ -3,6 +3,7 @@ import User from "../models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utils/email";
+import Product from "../models/Products"
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 
@@ -239,6 +240,155 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     console.error("Reset password error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// Add product to wishlist
+export const addToWishlist = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user._id; // Extracted from the middleware
+    const { productId } = req.body; // The product the user wants to add to the wishlist
+
+    // Check if product exists
+    const product = await Product.findById(productId);
+    if (!product) {
+      res.status(404).json({ message: 'Product not found' });
+      return;  // Return after sending the response
+    }
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // Check if product is already in wishlist
+    const productExistsInWishlist = user.wishlist.includes(productId);
+    if (productExistsInWishlist) {
+      res.status(400).json({ message: 'Product already in wishlist' });
+      return;
+    }
+
+    // Add product to wishlist
+    user.wishlist.push(productId); // Directly push the productId (ObjectId)
+    await user.save();
+
+    res.status(200).json({ message: 'Product added to wishlist', wishlist: user.wishlist });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Remove product from wishlist
+export const removeFromWishlist = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user._id; // Extracted from the middleware
+    const { productId } = req.body;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // Remove the product from wishlist
+    user.wishlist = user.wishlist.filter(item => item.toString() !== productId);
+    await user.save();
+
+    res.status(200).json({ message: 'Product removed from wishlist', wishlist: user.wishlist });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+export const addAddress = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    if (user.address.length >= 3) {
+      res.status(400).json({ message: "Maximum of 3 addresses allowed" });
+      return;
+    }
+
+    const { name, phoneNumber, address, isDefault } = req.body;
+
+    if (isDefault) {
+      user.address.forEach((addr: any) => {
+        addr.isDefault = false;
+      });
+    }
+
+    user.address.push({ name, phoneNumber, address, isDefault: !!isDefault });
+    await user.save();
+
+    res.status(200).json({ message: "Address added successfully", addresses: user.address });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const updateAddress = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user._id;
+    const { index } = req.params;
+    const { name, phone, address, isDefault } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user || !user.address[+index]) {
+      res.status(404).json({ message: "Address not found" });
+      return;
+    }
+
+    if (isDefault) {
+      user.address.forEach((addr: any) => (addr.isDefault = false));
+    }
+
+    const target = user.address[+index];
+    if (name) target.name = name;
+    if (phone) target.phone = phone;
+    if (address) target.address = address;
+    if (typeof isDefault === "boolean") target.isDefault = isDefault;
+
+    await user.save();
+    res.status(200).json({ message: "Address updated", address: user.address });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user._id;
+    const { index } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user || !user.address[+index]) {
+      res.status(404).json({ message: "Address not found" });
+      return;
+    }
+
+    user.address.splice(+index, 1);
+    await user.save();
+
+    res.status(200).json({ message: "Address deleted", address: user.address });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
